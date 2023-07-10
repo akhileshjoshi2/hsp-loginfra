@@ -1,15 +1,15 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: my-application
+  name: hsp-loginfra
 spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: crossplane-system
   project: hsp-loginfra-definition
   source:
-    repoURL: https://github.com/myorg/my-repo.git
-    path: /path/to/application
+    repoURL: https://github.com/akhileshjoshi2/hsp-loginfra.git
+    path: hsp-loginfra-definition
     targetRevision: HEAD
   syncPolicy:
     automated:
@@ -19,21 +19,20 @@ spec:
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: my-other-application
+  name: hsp-loginfra-claim
 spec:
   destination:
     server: https://kubernetes.default.svc
-    namespace: my-namespace
-  project: my-project
+    namespace: crossplane-system
+  project: hsp-loginfra-claim
   source:
-    repoURL: https://github.com/myorg/my-repo.git
-    path: /path/to/other-application
+    repoURL: https://github.com/akhileshjoshi2/hsp-loginfra.git
+    path: hsp-loginfra-claim
     targetRevision: HEAD
   syncPolicy:
     automated:
       selfHeal: true
       prune: true
   dependencies:
-    - name: my-application
-      namespace: my-namespace
-      targetRevision: HEAD
+    - name: hsp-loginfra-definition
+      namespace:
