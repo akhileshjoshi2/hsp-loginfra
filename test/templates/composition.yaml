@@ -1,0 +1,311 @@
+apiVersion: apiextensions.crossplane.io/v1
+kind: Composition
+metadata:
+  name: xloginfratests.platform.hsdp.io
+   annotations:
+     argocd.argoproj.io/sync-wave: "1"
+  labels:
+    provider: aws
+spec:
+#  environment:
+#    environmentConfigs:
+#      - ref:
+#          name: hsp-addons
+  compositeTypeRef:
+    apiVersion: platform.hsdp.io/v1alpha1
+    kind: Xloginfratest
+  resources:
+    - name: RDSInstance
+      base:
+        apiVersion: database.aws.crossplane.io/v1beta1
+        kind: RDSInstance
+        spec:
+          #          providerConfigRef:
+          #            name: aws-provider
+          forProvider:
+            copyTagsToSnapshot: true
+            storageEncrypted: true
+            #            backupRetentionPeriod: 7
+            #            backupWindow: 03:00-04:00
+            #            maintenanceWindow: Sun:00:00-Sun:03:00
+            deletionProtection: false
+            skipFinalSnapshot: true
+            masterUsername: masteruser
+            publiclyAccessible: false
+            dbInstanceClass: db.t3.micro
+            maxAllocatedStorage: 100
+            skipFinalSnapshotBeforeDeletion: true
+            engine: postgres
+            engineVersion: "13.7"
+          providerConfigRef:
+            name:
+      patches:
+        - fromFieldPath: spec.resourceConfig.vpcSecurityGroupIds
+          toFieldPath: spec.forProvider.vpcSecurityGroupIds[0]
+          policy:
+            fromFieldPath: Required
+
+        - fromFieldPath: spec.settings.dbSubnetGroupName
+          toFieldPath: spec.forProvider.dbSubnetGroupName
+          policy:
+            fromFieldPath: Required
+
+        - fromFieldPath: spec.resourceConfig.region
+          toFieldPath: spec.forProvider.region
+          policy:
+            fromFieldPath: Required
+
+        - fromFieldPath: spec.writeConnectionSecretToRef.name
+          toFieldPath: spec.publishConnectionDetailsTo.name
+        - fromFieldPath: spec.settings.external-name
+          toFieldPath: spec.writeConnectionSecretToRef.name
+          transforms:
+            - type: string
+              string:
+                fmt: "%s-sql"
+        - fromFieldPath: spec.settings.dbName
+          toFieldPath: spec.forProvider.dbName
+        - fromFieldPath: spec.resourceConfig.deletionPolicy
+          toFieldPath: spec.deletionPolicy
+        - fromFieldPath: spec.resourceConfig.writeConnectionSecretNamespace
+          toFieldPath: spec.writeConnectionSecretToRef.namespace
+        #        - fromFieldPath: metadata.name
+        #          toFieldPath: spec.writeConnectionSecretToRef.name
+        - fromFieldPath: spec.settings.instanceClass
+          toFieldPath: spec.forProvider.instanceClass
+        - fromFieldPath: spec.settings.engine
+          toFieldPath: spec.forProvider.engine
+        - fromFieldPath: spec.settings.engineVersion
+          toFieldPath: spec.forProvider.engineVersion
+        - fromFieldPath: spec.settings.storageGB
+          toFieldPath: spec.forProvider.allocatedStorage
+        - fromFieldPath: spec.settings.maxStorageGB
+          toFieldPath: spec.forProvider.maxAllocatedStorage
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.settings.external-name
+          toFieldPath: metadata.annotations[crossplane.io/external-name]
+        - fromFieldPath: spec.resourceConfig.aws_provider_config_name
+          toFieldPath: spec.providerConfigRef.name
+    - name: Keycloak
+      base:
+        apiVersion: helm.crossplane.io/v1beta1
+        kind: Release
+        metadata:
+          name:
+          annotations:
+#            crossplane.io/external-name:
+          labels:
+            app.kubernetes.io/managed-by: Helm
+        spec:
+          forProvider:
+            chart:
+              name: keycloak
+              repository: https://charts.bitnami.com/bitnami
+              version: 15.2.5
+
+            global:
+              storageClass: default
+            commonAnnotations:
+              meta.helm.sh/release-name:
+              meta.helm.sh.release-namespace:
+            commonLabels:
+                  app.kubernetes.io/managed-by: Helm
+
+            namespace:
+            values:
+              persistence:
+                enabled: true
+
+              postgresql:
+                enabled: false
+
+              externalDatabase:
+                database: postgres
+            set:
+              - name: externalDatabase.host
+                valueFrom:
+                  secretKeyRef:
+                    name:
+                    namespace: crossplane-system
+                    key: endpoint
+              - name: externalDatabase.user
+                valueFrom:
+                  secretKeyRef:
+                    name:
+                    namespace: crossplane-system
+                    key: username
+              - name: externalDatabase.password
+                valueFrom:
+                  secretKeyRef:
+                    name:
+                    namespace: crossplane-system
+                    key: password
+
+          providerConfigRef:
+            name: helm-provider
+
+      patches:
+        - fromFieldPath: spec.resourceConfig.helm_provider_config_name
+          toFieldPath: spec.providerConfigRef.name
+        - fromFieldPath: spec.keycloaksettings.keycloakVersion
+          toFieldPath: spec.forProvider.chart.version
+        - fromFieldPath: spec.resourceConfig.writeConnectionSecretNamespace
+          toFieldPath: spec.writeConnectionSecretToRef.namespace
+        - fromFieldPath: spec.keycloaksettings.external-name
+          toFieldPath: metadata.annotations[crossplane.io/external-name]
+        - fromFieldPath: spec.keycloaksettings.external-name
+          toFieldPath: spec.metadata.name
+        - fromFieldPath: spec.resourceConfig.writeConnectionSecretNamespace
+          toFieldPath: spec.forProvider.namespace
+        - fromFieldPath: spec.keycloaksettings.external-name
+          toFieldPath: spec.writeConnectionSecretToRef.name
+          transforms:
+            - type: string
+              string:
+                fmt: "%s-keycloak"
+
+        - fromFieldPath: spec.settings.external-name
+          toFieldPath: spec.forProvider.set[0].valueFrom.secretKeyRef.name
+          transforms:
+            - type: string
+              string:
+                fmt: "%s-sql"
+        - fromFieldPath: spec.settings.external-name
+          toFieldPath: spec.forProvider.set[1].valueFrom.secretKeyRef.name
+          transforms:
+            - type: string
+              string:
+                fmt: "%s-sql"
+        - fromFieldPath: spec.settings.external-name
+          toFieldPath: spec.forProvider.set[2].valueFrom.secretKeyRef.name
+          transforms:
+            - type: string
+              string:
+                fmt: "%s-sql"
+        - fromFieldPath: spec.keycloaksettings.external-name
+          toFieldPath: spec.forProvider.commonAnnotations[meta.helm.sh/release-name]
+        - fromFieldPath: spec.resourceConfig.writeConnectionSecretNamespace
+          toFieldPath: metadata.forProvider.commonAnnotations[meta.helm.sh/release-namespace]
+#        - fromFieldPath: spec.writeConnectionSecretToRef.name
+#          toFieldPath: spec.publishConnectionDetailsToRef.name
+#        - fromFieldPath: spec.keycloaksettings.external-name
+#          toFieldPath: spec.publishConnectionDetailsToRef.metadata.name
+#        - fromFieldPath: spec.resourceConfig.writeConnectionSecretNamespace
+#          toFieldPath: spec.publishConnectionDetailsToRef.annotations[meta.helm.sh/release-namespace]
+#        - fromFieldPath: spec.keycloaksettings.external-name
+#          toFieldPath: spec.publishConnectionDetailsToRef.annotations[meta.helm.sh/release-name]
+
+
+
+
+    - name: opensearch-domain-test
+      base:
+        apiVersion: opensearchservice.aws.crossplane.io/v1alpha1
+        kind: Domain
+        metadata:
+          name:
+          annotations:
+        spec:
+          providerConfigRef:
+            name:
+          forProvider:
+            clusterConfig:
+              coldStorageOptions:
+                enabled: true
+              dedicatedMasterCount: 3
+              dedicatedMasterEnabled: true
+#              dedicatedMasterType: m5.large.search
+              instanceCount: 2
+#              instanceType: m5.large.search
+              warmEnabled: true
+              warmType: ultrawarm1.medium.search
+              warmCount: 2
+
+              zoneAwarenessConfig:
+                availabilityZoneCount: 2
+              zoneAwarenessEnabled: true
+
+            vpcOptions:
+              subnetIds:
+                - subnet-05b22502de530b1c4
+                - subnet-022d0c27c2cb124ef
+#              securityGroupIds:
+#                - sg-0047532f9d62ef19e
+            cognitoOptions:
+              enabled: false
+            domainEndpointOptions:
+              enforceHTTPS: true
+
+            ebsOptions:
+              ebsEnabled: true
+              volumeSize: 10
+              volumeType: gp2
+
+            encryptionAtRestOptions:
+              enabled: false
+            engineVersion: OpenSearch_2.5
+            nodeToNodeEncryptionOptions:
+              enabled: false
+#            region: us-east-1
+#            name: test-domain
+
+            tags:
+              - key: name
+                value: log
+      patches:
+        - fromFieldPath: spec.resourceConfig.aws_provider_config_name
+          toFieldPath: spec.providerConfigRef.name
+        - fromFieldPath: spec.resourceConfig.deletionPolicy
+          toFieldPath: spec.deletionPolicy
+        - fromFieldPath: spec.writeConnectionSecretToRef.name
+          toFieldPath: spec.publishConnectionDetailsTo.name
+        - fromFieldPath: metadata.name
+          toFieldPath: spec.writeConnectionSecretToRef.name
+          transforms:
+            - type: string
+              string:
+                fmt: "%s-opensearch-domain"
+        - fromFieldPath: spec.resourceConfig.writeConnectionSecretNamespace
+          toFieldPath: spec.writeConnectionSecretToRef.namespace
+        - fromFieldPath: spec.opensearchsettings.engineVersion
+          toFieldPath: spec.forProvider.engineVersion
+        - fromFieldPath: spec.opensearchsettings.storageGB
+          toFieldPath: spec.forProvider.ebsOptions.volumeSize
+        - fromFieldPath: spec.opensearchsettings.instanceClass
+          toFieldPath: spec.forProvider.clusterConfig.instanceType
+        - fromFieldPath: spec.opensearchsettings.instanceClass
+          toFieldPath: spec.forProvider.clusterConfig.dedicatedMasterType
+        - fromFieldPath: spec.resourceConfig.region
+          toFieldPath: spec.forProvider.region
+          policy:
+            fromFieldPath: Required
+        - fromFieldPath: spec.resourceConfig.vpcSecurityGroupIds
+          toFieldPath: spec.forProvider.vpcOptions.securityGroupIds[0]
+        - type: FromCompositeFieldPath
+          fromFieldPath: spec.opensearchsettings.external-name
+          toFieldPath: metadata.annotations[crossplane.io/external-name]
+        - fromFieldPath: spec.opensearchsettings.external-name
+          toFieldPath: metadata.name
+        - type: CombineFromComposite
+          combine:
+            variables:
+              - fromFieldPath: spec.opensearchsettings.external-name
+            strategy: string
+            string:
+              fmt: '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":"*"},"Action":"es:*","Resource":"arn:aws:es:us-east-1:740050906158:domain/%s/*"}]}'
+#              fmt: |
+#                {
+#                    "Version": "2012-10-17",
+#                    "Statement": [{
+#                        "Effect": "Allow",
+#                        "Principal": {
+#                            "AWS": "*"
+#                        },
+#                        "Action": "es:*",
+#                        "Resource": "arn:aws:es:us-east-1:740050906158:domain/%s/*"
+#                    }]
+#                }
+          toFieldPath: spec.forProvider.accessPolicies
+        - fromFieldPath: spec.opensearchsettings.external-name
+          toFieldPath: spec.forProvider.name
+
