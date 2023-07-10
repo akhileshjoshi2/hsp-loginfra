@@ -1,6 +1,9 @@
 apiVersion: v2
 name: hsp-loginfra-definition
 description: A Helm chart for Kubernetes
+metadata:
+ annotations:
+  argocd.argoproj.io/sync-wave: "1"
 
 # A chart can be either an 'application' or a 'library' chart.
 #

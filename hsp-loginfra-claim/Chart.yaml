@@ -1,6 +1,9 @@
 apiVersion: v2
 name: hsp-infra-claim
 description: A Helm chart for Kubernetes
+metadata:
+  annotations:     
+    argocd.argoproj.io/sync-wave: "2"     
 
 # A chart can be either an 'application' or a 'library' chart.
 #
