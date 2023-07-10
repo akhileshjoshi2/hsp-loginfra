@@ -1,0 +1,39 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: my-application
+spec:
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: crossplane-system
+  project: hsp-loginfra-definition
+  source:
+    repoURL: https://github.com/myorg/my-repo.git
+    path: /path/to/application
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: my-other-application
+spec:
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: my-namespace
+  project: my-project
+  source:
+    repoURL: https://github.com/myorg/my-repo.git
+    path: /path/to/other-application
+    targetRevision: HEAD
+  syncPolicy:
+    automated:
+      selfHeal: true
+      prune: true
+  dependencies:
+    - name: my-application
+      namespace: my-namespace
+      targetRevision: HEAD
