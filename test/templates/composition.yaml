@@ -2,8 +2,8 @@ apiVersion: apiextensions.crossplane.io/v1
 kind: Composition
 metadata:
   name: xloginfratests.platform.hsdp.io
-   annotations:
-     argocd.argoproj.io/sync-wave: "1"
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
   labels:
     provider: aws
 spec:
