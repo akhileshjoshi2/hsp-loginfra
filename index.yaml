@@ -1,0 +1,25 @@
+apiVersion: v1
+entries:
+  hsp-loginfra-claim:
+  - apiVersion: v2
+    appVersion: 1.0.0
+    created: "2023-07-10T18:10:23.22694006+05:30"
+    description: A Helm chart for Kubernetes
+    digest: 659c5ac2e38d5ec59a30415d0e799ae6bc0c3e4264132ed790efe690c1440f7b
+    name: hsp-loginfra-claim
+    type: application
+    urls:
+    - Packages/hsp-loginfra-claim-0.1.0.tgz
+    version: 0.1.0
+  hsp-loginfra-definition:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2023-07-10T18:10:23.227272928+05:30"
+    description: A Helm chart for Kubernetes
+    digest: ac72a992f45e8312d1d462fbd23576c0a26f70d66c0569093a026f580552d223
+    name: hsp-loginfra-definition
+    type: application
+    urls:
+    - Packages/hsp-loginfra-definition-0.1.0.tgz
+    version: 0.1.0
+generated: "2023-07-10T18:10:23.225407014+05:30"
